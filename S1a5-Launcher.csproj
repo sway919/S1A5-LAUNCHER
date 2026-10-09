@@ -1,0 +1,109 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ═══════════════════════════════════════════════════════════════════
+    S1A5 一键启动器 (S1a5-Launcher)
+
+    【定位】 服务端(java -jar)启停 + 网页 GM + 一键进游戏(PVF 客户端) +
+      存档三件套备份还原 + 外观设置。界面沿用 DOF-90-ServerUI-AUM 的
+      WPF 设计系统 (沉浸背景 + 玻璃面板)。
+
+    ═══════════════════════════════════════════════════════════════════
+    【两个目标框架 —— 为什么】
+      用户 2026-10-08 拍板: **体积优先, 分发版走 net48**(和参考项目 60US starter 的
+      Dfo60US-Launcher.exe 同一个路子: 1.5 MB)。要"秒开"的话 net10 那条路仍然留着,
+      但 exe 会变成 ~74 MB(把 .NET 运行时打进去), 自己权衡。
+
+      net48  (默认分发)  Costura 全内嵌, 单文件约 1.7 MB
+        · 不需要玩家装任何运行时 (Win10/11 自带 .NET Framework 4.8);
+        · 代价: 首次弹窗必须现场 JIT。本机实测(空窗口到可见) **2.4~2.8s** ——
+          这是框架地板, 代码层面下不来。带启动落地窗的实际观感: 3.4s 出落地窗、
+          4.8s 主界面可用。
+        · 发布: dotnet build -f net48 -c Release   (或直接跑 build.cmd)
+
+      net10.0-windows  (可选加速版)  自包含 + 单文件 + 压缩, 约 74~77 MB
+        · 同样的空窗口只要 **0.9~1.2s**; 启动器实测 1.3s 出落地窗、1.7s 主界面可用。
+        · ReadyToRun 在这里量不出收益 (开/关都是 ~1.3s), 所以关掉; 压缩省一半体积、只慢 ~0.3s。
+        · 发布: dotnet publish -f net10.0-windows -c Release
+
+      两份共用同一份源码; Compat.cs / #if NET48 处理框架差异,
+      Costura 与 System.Text.Json 的包引用只在 net48 下生效。
+    ═══════════════════════════════════════════════════════════════════
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFrameworks>net48;net10.0-windows</TargetFrameworks>
+    <UseWPF>true</UseWPF>
+    <!-- 复用 FolderBrowserDialog 等系统对话框 (仅对话框, 不做 WinForms UI) -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>S1a5-Launcher</AssemblyName>
+    <RootNamespace>ServerUI</RootNamespace>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <Version>1.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0-s1a5</InformationalVersion>
+    <ApplicationIcon>图标EXE.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>false</GenerateBindingRedirectsOutputType>
+    <NoWarn>$(NoWarn);CS0067;CS0414;CS0169;WPF0001;WFO0003</NoWarn>
+  </PropertyGroup>
+
+  <!-- ===== net10 可选加速版的发布形态: 自包含 + 单文件 + 压缩 =====
+       实测(本机, 空窗口到可见):
+         net48 1.7MB          2.4~2.8s   ← 框架地板, 靠现场 JIT
+         net10 自包含单文件压缩  74MB    ~1.3s
+         net10 自包含未压缩     185MB    ~1.0s
+         net10 依赖框架(需装运行时) 0.3MB  ~1.2s
+      不压缩快 ~0.3s 但体积翻倍(185MB), 不值。 -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 自检工程独立编译, 不能混进主程序 (否则 Program.Main 会和 WPF 入口打架) -->
+    <Compile Remove="tests/**" />
+    <Page Remove="tests/**" />
+    <None Remove="tests/**" />
+    <Resource Remove="tests/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 出厂默认背景 (wp_2008_052_calendar_d_1600.jpg) -->
+    <Resource Include="BgDefault.jpg" />
+    <!-- 界面内部用的图标源 (标题栏品牌标记 / 窗口任务栏图标)。
+         刻意【不】把 图标EXE.ico 也做成 Resource: exe 图标由 ApplicationIcon 嵌一次,
+         再当 Resource 收一次就是同样的字节在 exe 里存两遍。 -->
+    <Resource Include="icon128.png" />
+  </ItemGroup>
+
+  <!-- ===== net48 专属 ===== -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <!-- .NET Framework 4.8 需显式引用的框架程序集 -->
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Management" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+    <!-- Costura.Fody: net48 没有自带运行时, 托管依赖全部内嵌, 最终只有一个 EXE。
+         net10 版是自包含发布, 依赖由运行时目录提供, 不需要也不支持 Costura。 -->
+    <PackageReference Include="Costura.Fody" Version="5.7.0" PrivateAssets="all" />
+    <PackageReference Include="Fody" Version="6.8.2" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- ===== net10 专属 =====
+       WMI (Win32_Process 查 java 命令行) 用的是 System.Management ——
+       net48 是框架程序集, net10 要走 NuGet 包。 -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+    <PackageReference Include="System.Management" Version="9.0.0" />
+  </ItemGroup>
+
+</Project>

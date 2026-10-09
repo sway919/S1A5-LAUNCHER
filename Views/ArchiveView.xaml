@@ -1,0 +1,139 @@
+﻿<!--
+    ════════════════════════════════════════════════════════════════
+    存档管理 — S1A5 的存档是【三件套】: s1a5.db / -wal / -shm
+
+      顶部: 常驻提示条 —— 备份/还原必须先停止服务端, 否则会拷出残缺的库
+      其下: 操作条 (当前存档读数 + 选中项 + 全部按钮), 横向排布
+      主体: 备份列表 (启动器备份 + GM 工具自动备份, 按时间倒序)
+
+    版式说明: 列表【右侧留出 500px】—— 运行日志面板固定在窗口右下角,
+    列表与按钮都排在它左边, 展开日志时不会盖住任何可点控件。
+    ════════════════════════════════════════════════════════════════
+-->
+<UserControl x:Class="ServerUI.Views.ArchiveView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Margin="108,56,22,64">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 顶部提示条: 三件套纪律 + 当前是否可写 -->
+        <Border x:Name="WarnBar" Style="{StaticResource GlassCard}" Padding="16,12" Margin="0,0,0,12">
+            <DockPanel>
+                <Path x:Name="WarnIcon" DockPanel.Dock="Left" Style="{StaticResource Ico}"
+                      Data="{StaticResource IcShield}" Width="18" Height="18" Margin="0,1,12,0"
+                      Stroke="{DynamicResource Brush.Accent}" VerticalAlignment="Top"/>
+                <StackPanel>
+                    <TextBlock x:Name="WarnTitle" Style="{StaticResource Txt}" FontWeight="SemiBold"
+                               Text="存档是三件套，必须一起备份"/>
+                    <TextBlock x:Name="WarnText" Style="{StaticResource Txt3}" TextWrapping="Wrap"
+                               Margin="0,4,0,0" LineHeight="19"
+                               Text="s1a5.db（主库）+ s1a5.db-wal（预写日志）+ s1a5.db-shm（共享内存索引）。只拷主库、或边运行边拷，会得到残缺的库 —— 下次启动直接报 “malformed database schema ... orphan index”，存档就白拷了。所以备份/还原前请先停止服务端。"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- 操作条 -->
+        <Border Grid.Row="1" Style="{StaticResource GlassCard}" Padding="16,12" Margin="0,0,0,12">
+            <DockPanel>
+                <!-- 按钮组 (可换行, 窗口变窄时不会挤坏) -->
+                <WrapPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button x:Name="BtBackup" Style="{StaticResource BtnAccent}" Content="备份当前存档" Height="34"
+                            Width="140" Margin="0,0,8,0" Click="Backup_Click"
+                            ToolTip="把 s1a5.db 三件套一起备份（需要先停止服务端）"/>
+                    <Button x:Name="BtRestore" Style="{StaticResource BtnAction}" Content="还原所选" Height="34"
+                            Width="120" Margin="0,0,8,0" Click="Restore_Click" IsEnabled="False"
+                            ToolTip="当前存档会先自动备份成 _还原前_&lt;时间戳&gt;，随时可以回退"/>
+                    <Button x:Name="BtRename" Style="{StaticResource BtnGlass}" Content="重命名" Height="34"
+                            Width="100" Margin="0,0,8,0" Click="Rename_Click" IsEnabled="False"/>
+                    <Button x:Name="BtDelete" Style="{StaticResource BtnGlass}" Content="删除" Height="34"
+                            Width="90" Margin="0,0,8,0" Click="Delete_Click" IsEnabled="False"/>
+                    <Button Style="{StaticResource BtnGlass}" Content="导入外部存档" Height="34"
+                            Width="140" Margin="0,0,8,0" Click="Import_Click"
+                            ToolTip="把别处拿到的一份 .sqlite 收进备份库，之后再还原"/>
+                    <Button Style="{StaticResource BtnGlass}" Content="打开备份目录" Height="34"
+                            Width="140" Margin="0,0,8,0" Click="OpenDir_Click"/>
+                    <Button Style="{StaticResource BtnSmall}" Content="刷新" Height="34"
+                            Width="70" Margin="0,0,8,0" Click="Refresh_Click" VerticalAlignment="Center"/>
+                    <Button Style="{StaticResource BtnDanger}" Content="重新开局（清空存档）" Height="34"
+                            Width="190" Click="Reset_Click"
+                            ToolTip="删掉存档三件套；下次启动服务端会建一个全新的空库。不可撤销。"/>
+                </WrapPanel>
+
+                <!-- 读数: 当前存档 / 选中项 -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="当前存档" Style="{StaticResource Cap}" Margin="0,0,0,5"/>
+                        <TextBlock x:Name="LbCur" Style="{StaticResource Txt}" TextWrapping="Wrap" Text="--"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="选中项" Style="{StaticResource Cap}" Margin="0,0,0,5"/>
+                        <TextBlock x:Name="LbSel" Style="{StaticResource Txt2}" TextWrapping="Wrap"
+                                   Text="在上面的列表里选一份备份。"/>
+                    </StackPanel>
+                </Grid>
+            </DockPanel>
+        </Border>
+
+        <!-- 备份列表 (右侧留出运行日志的位置) -->
+        <Border Grid.Row="2" Style="{StaticResource GlassCard}" Margin="0,0,500,0" Padding="14,12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="1"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Margin="0,0,0,10">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="备份列表" Style="{StaticResource H2}"/>
+                        <TextBlock x:Name="LbCount" Style="{StaticResource Txt3}" Margin="10,0,0,0"
+                                   VerticalAlignment="Bottom"/>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource Txt3}" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                               Text="网页 GM 每次写库前的自动备份就落在这里（data\webgm-backups\）—— 可以还原，但不能改名或删除。"/>
+                </Grid>
+                <Border Grid.Row="1" Background="{DynamicResource Brush.Sep}"/>
+
+                <ListBox x:Name="Lst" Grid.Row="2" Margin="0,8,0,0" Background="Transparent"
+                         BorderThickness="0" SelectionChanged="Lst_SelectionChanged"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource RowItem}">
+                            <Setter Property="Padding" Value="10,8"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="150"/>
+                                    <ColumnDefinition Width="80"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" Style="{StaticResource Txt}"
+                                               FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding SourceAndNote}" Style="{StaticResource Txt3}"
+                                               Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Text="{Binding TimeText}" Style="{StaticResource Txt2}"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="{Binding SizeText}" Style="{StaticResource Txt2}"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

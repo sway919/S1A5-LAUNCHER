@@ -1,0 +1,193 @@
+<!--
+    ══════════════════════════════════════════════════════════════
+    主题令牌 · 浅色 — "暖瓷玻璃浮于原画之上", 与深色键位一一对应
+
+    配色同样来自 DNF 2009-02 挂历壁纸 (暖红橙主导, 主色相 26°): 浅色下
+    面板是暖白瓷 (#F0E6E4 系) 而不是冷白, 文字是暖黑, 强调色是同一支青蓝
+    在浅底上的深色版 (#006972, 白底 6.4:1)。
+
+    设计取向 (与第一版的关键区别):
+      · 原画一点不动 —— 不给整张图压白纱, 免得美术被洗成褪色照片。
+      · 只有两条渐隐带参与保证可读性: 顶部 120px (标题栏/导航) 与底部 300px
+        (日志胶囊/指挥台), 画面中间完全交给原画。
+      · 面板改成高透暖瓷玻璃 (91~96% 白) + 玻璃边缘描边 + 软投影 —— 原画会
+        在玻璃后面透出来一点, 但深色文字对比度仍然充足 (≥ 12:1)。
+      · 主行动仍是金色 (两套主题同一个金, 由 ArtPalette 统一给)。
+      · 日志控制台在两套主题下都保持深底。
+
+    色值与 Brushes.Dark.xaml 一样, 来自 tests\PaletteProbe 对这张图的实算结果。
+    ══════════════════════════════════════════════════════════════
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Color x:Key="C.Bd1">#FFF5F3F6</Color>
+    <Color x:Key="C.Bd2">#FFEAE7EA</Color>
+    <Color x:Key="C.Bd3">#FFFFFBFD</Color>
+    <Color x:Key="C.GlowA">#2E455E91</Color>
+    <Color x:Key="C.GlowB">#24EABB66</Color>
+    <Color x:Key="C.Vig">#1C0A0706</Color>
+
+    <SolidColorBrush x:Key="Brush.WindowBg"    Color="#F4EFEE"/>
+    <!-- 内容页压暗: 浅色下只是"轻微暖灰罩"。面板本身已近不透明白,
+         靠面板保证可读, 背景只做轻微退让, 不参与遮字 -->
+    <SolidColorBrush x:Key="Brush.ShadeSolid"  Color="#3D848386"/>
+    <SolidColorBrush x:Key="Brush.FadeSolid"   Color="#FF0E0E0F"/>
+    <SolidColorBrush x:Key="Brush.DecoRing"    Color="#14241C1A"/>
+
+    <!-- 顶部/底部渐隐带 (原画只在画面中段完整呈现)。
+         这张图的标题带与底部带都是深的, 所以浅色主题下这两条带也是深色纱。 -->
+    <LinearGradientBrush x:Key="Brush.ScrimTopGrad" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#4CFAF5F5" Offset="0"/>
+        <GradientStop Color="#2EFAF5F5" Offset="0.45"/>
+        <GradientStop Color="#00FAF5F5" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="Brush.ScrimBotGrad" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#00FAF5F5" Offset="0"/>
+        <GradientStop Color="#46FAF5F5" Offset="0.6"/>
+        <GradientStop Color="#4CFAF5F5" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- ===== 表面: 暖瓷玻璃 ===== -->
+    <SolidColorBrush x:Key="Brush.Glass"        Color="#E6EAE7EA"/>
+    <SolidColorBrush x:Key="Brush.GlassStrong"  Color="#FFEEECEE"/>
+    <SolidColorBrush x:Key="Brush.GlassHover"   Color="#FFE2DFE0"/>
+    <SolidColorBrush x:Key="Brush.GlassPress"   Color="#F5D9D6D9"/>
+    <SolidColorBrush x:Key="Brush.GlassBorder"  Color="#1F241C1A"/>
+    <SolidColorBrush x:Key="Brush.GlassBorderHot" Color="#38241C1A"/>
+    <SolidColorBrush x:Key="Brush.HoverSoft"    Color="#147D7C7E"/>
+    <SolidColorBrush x:Key="Brush.Sep"          Color="#177D7C7D"/>
+    <LinearGradientBrush x:Key="Brush.GlassGrad" StartPoint="0,0" EndPoint="0.35,1">
+        <GradientStop Color="#EBEFECED" Offset="0"/>
+        <GradientStop Color="#E6ECE9EB" Offset="0.25"/>
+        <GradientStop Color="#E0E9E7E8" Offset="0.5"/>
+        <GradientStop Color="#DBE7E4E6" Offset="0.75"/>
+        <GradientStop Color="#D6E4E2E4" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="Brush.GlassEdge" StartPoint="0,0" EndPoint="0.2,1">
+        <GradientStop Color="#FFFFFCFB" Offset="0"/>
+        <GradientStop Color="#C9DDDADA" Offset="0.25"/>
+        <GradientStop Color="#94BCBABB" Offset="0.5"/>
+        <GradientStop Color="#5E9C9A9C" Offset="0.75"/>
+        <GradientStop Color="#287D7C7E" Offset="1"/>
+    </LinearGradientBrush>
+    <RadialGradientBrush x:Key="Brush.CardSheen" GradientOrigin="0.12,0" Center="0.12,0"
+                         RadiusX="0.9" RadiusY="0.75">
+        <GradientStop Color="#0FFFFCFB" Offset="0"/>
+        <GradientStop Color="#00FFFCFB" Offset="1"/>
+    </RadialGradientBrush>
+
+    <SolidColorBrush x:Key="Brush.Text"   Color="#FF201F20"/>
+    <SolidColorBrush x:Key="Brush.Text2"  Color="#FF535253"/>
+    <SolidColorBrush x:Key="Brush.Text3"  Color="#FF7D7C7C"/>
+
+    <!-- 强调色: 青蓝的浅底版 (白底 6.4:1) -->
+    <SolidColorBrush x:Key="Brush.Accent"       Color="#FF455E91"/>
+    <SolidColorBrush x:Key="Brush.AccentHover"  Color="#FF546CA0"/>
+    <SolidColorBrush x:Key="Brush.AccentPress"  Color="#FF324A7C"/>
+    <SolidColorBrush x:Key="Brush.AccentSoft"   Color="#33DFE2F0"/>
+    <SolidColorBrush x:Key="Brush.AccentLine"   Color="#66455E91"/>
+    <SolidColorBrush x:Key="Brush.AccentText"   Color="#FF455E91"/>
+    <SolidColorBrush x:Key="Brush.OnAccent"     Color="#FFFFFCFB"/>
+
+    <!-- 主行动色: 金 (与深色同一支, 由 ArtPalette 统一给) -->
+    <LinearGradientBrush x:Key="Brush.HeroFill" StartPoint="0,0" EndPoint="0.35,1">
+        <GradientStop Color="#FFFFDB92" Offset="0"/>
+        <GradientStop Color="#FFF5CB7C" Offset="0.25"/>
+        <GradientStop Color="#FFEABB66" Offset="0.5"/>
+        <GradientStop Color="#FFE0AB4E" Offset="0.75"/>
+        <GradientStop Color="#FFD59B33" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="Brush.HeroFillHot" StartPoint="0,0" EndPoint="0.35,1">
+        <GradientStop Color="#FFFFF1DF" Offset="0"/>
+        <GradientStop Color="#FFFAE0BB" Offset="0.25"/>
+        <GradientStop Color="#FFF4CF97" Offset="0.5"/>
+        <GradientStop Color="#FFEEBD70" Offset="0.75"/>
+        <GradientStop Color="#FFE8AB42" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="Brush.HeroFillPress" StartPoint="0,0" EndPoint="0.35,1">
+        <GradientStop Color="#FFF5C478" Offset="0"/>
+        <GradientStop Color="#FFE7B464" Offset="0.25"/>
+        <GradientStop Color="#FFD9A550" Offset="0.5"/>
+        <GradientStop Color="#FFCB9539" Offset="0.75"/>
+        <GradientStop Color="#FFBD861E" Offset="1"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="Brush.OnHero"   Color="#2B1B03"/>
+    <SolidColorBrush x:Key="Brush.HeroLine" Color="#7AE9B259"/>
+
+    <SolidColorBrush x:Key="Brush.Danger"       Color="#C0392B"/>
+    <SolidColorBrush x:Key="Brush.DangerHover"  Color="#D0483A"/>
+    <SolidColorBrush x:Key="Brush.DangerSoft"   Color="#1FC0392B"/>
+    <SolidColorBrush x:Key="Brush.OnDanger"     Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Warn"         Color="#9A6A12"/>
+    <SolidColorBrush x:Key="Brush.WarnSoft"     Color="#1F9A6A12"/>
+    <SolidColorBrush x:Key="Brush.OnWarn"       Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Info"         Color="#006972"/>
+    <SolidColorBrush x:Key="Brush.Scroll"       Color="#337D7C7E"/>
+
+    <SolidColorBrush x:Key="Brush.FieldFill"    Color="#F2EFECEC"/>
+    <SolidColorBrush x:Key="Brush.FieldBorder"  Color="#247D7C7D"/>
+    <SolidColorBrush x:Key="Brush.ProgressTrack" Color="#247D7C7E"/>
+
+    <SolidColorBrush x:Key="Brush.BadgeFill"    Color="#29DFE2F0"/>
+    <SolidColorBrush x:Key="Brush.BadgeLine"    Color="#59455E91"/>
+
+    <!-- ===== 标题栏 (chrome) 令牌 =====
+         这组颜色与页面主题解耦: 只由"原画标题带是深是浅"决定 (见 Core/ArtPalette)。
+         这张图顶部是深的, 所以浅色主题下标题栏也是深底浅字。
+         运行时会自适应注入, 这里是没有背景图时的兜底。 -->
+    <SolidColorBrush x:Key="Brush.ChromeFg"     Color="#FF201F1F"/>
+    <SolidColorBrush x:Key="Brush.ChromeFg2"    Color="#FF51504F"/>
+    <SolidColorBrush x:Key="Brush.ChromeFg3"    Color="#FF7E7C7B"/>
+    <SolidColorBrush x:Key="Brush.ChromeHover"  Color="#14313030"/>
+    <SolidColorBrush x:Key="Brush.ChromeSep"    Color="#1F484646"/>
+    <SolidColorBrush x:Key="Brush.ChromeCapsule" Color="#E6FAF5F5"/>
+    <SolidColorBrush x:Key="Brush.ChromeCapsuleBorder" Color="#246C6A6A"/>
+    <SolidColorBrush x:Key="Brush.ChromeAccent" Color="#FF5B5959"/>
+    <SolidColorBrush x:Key="Brush.ChromeAccentSoft" Color="#33E5E2E1"/>
+    <SolidColorBrush x:Key="Brush.ChromeAccentLine" Color="#80605E5E"/>
+    <!-- ===== 标题栏端部渐变底 (品牌区 / 状态与窗口按钮区) =====
+         运行时会由 ArtPalette.ApplyEnvironment 按标题带的明暗重算, 这里是没有背景图时的兜底。 -->
+    <LinearGradientBrush x:Key="Brush.ChromeBarLeft" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#E0FAF5F5" Offset="0"/>
+        <GradientStop Color="#9EFAF5F5" Offset="0.5"/>
+        <GradientStop Color="#00FAF5F5" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="Brush.ChromeBarRight" StartPoint="1,0" EndPoint="0,0">
+        <GradientStop Color="#E0FAF5F5" Offset="0"/>
+        <GradientStop Color="#9EFAF5F5" Offset="0.5"/>
+        <GradientStop Color="#00FAF5F5" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush.MarkGrad" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FF7186B5" Offset="0"/>
+        <GradientStop Color="#FF667CAC" Offset="0.25"/>
+        <GradientStop Color="#FF5B72A3" Offset="0.5"/>
+        <GradientStop Color="#FF50689A" Offset="0.75"/>
+        <GradientStop Color="#FF455E91" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- 日志控制台: 与深色主题一致 (深底彩字) -->
+    <SolidColorBrush x:Key="Brush.LogBg"    Color="#F2151517"/>
+    <SolidColorBrush x:Key="Brush.LogText"  Color="#FFE5E2E2"/>
+    <SolidColorBrush x:Key="Brush.LogTime"  Color="#7C8CA0"/>
+    <SolidColorBrush x:Key="Brush.LogOk"    Color="#59D9F5"/>
+    <SolidColorBrush x:Key="Brush.LogWarn"  Color="#F2C46B"/>
+    <SolidColorBrush x:Key="Brush.LogErr"   Color="#FF8A7E"/>
+    <SolidColorBrush x:Key="Brush.LogBlue"  Color="#7FD4F2"/>
+    <SolidColorBrush x:Key="Brush.LogGold"  Color="#E8B24A"/>
+    <SolidColorBrush x:Key="Brush.LogGray"  Color="#93A2B4"/>
+
+    <!-- 暖瓷卡片: 投影要够重才能从深色原画上"浮"起来 -->
+    <DropShadowEffect x:Key="Fx.CardShadow" Color="#14100E" BlurRadius="30"
+                      ShadowDepth="9" Direction="270" Opacity="0.34" RenderingBias="Performance"/>
+    <DropShadowEffect x:Key="Fx.HeroGlow" Color="#E0AB4E" BlurRadius="18"
+                      ShadowDepth="0" Opacity="0.38" RenderingBias="Performance"/>
+
+    <SolidColorBrush x:Key="Brush.Pill"         Color="#211F1F"/>
+    <SolidColorBrush x:Key="Brush.PillHover"    Color="#3A3433"/>
+    <SolidColorBrush x:Key="Brush.PillText"     Color="#FFFCFB"/>
+    <SolidColorBrush x:Key="Brush.PillCircle"   Color="#FFFCFB"/>
+    <SolidColorBrush x:Key="Brush.TabSel"       Color="#211F1F"/>
+    <SolidColorBrush x:Key="Brush.TabSelText"   Color="#FFFCFB"/>
+</ResourceDictionary>

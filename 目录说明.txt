@@ -1,0 +1,82 @@
+S1A5 一键启动器 · 源码
+======================
+工程：S1a5-Launcher（WPF，两个目标框架）
+  · net48            **分发版** —— Costura 全内嵌单文件（约 1.7 MB）。玩家机器不用装任何运行时
+                     （运行时用 Windows 自带的 .NET Framework 4.8），和参考项目 60US 的启动器
+                     同一个路子。代价：net48 的 WPF 窗口要现场 JIT，实测任何窗口
+                     （含 40 行空窗口）都要 2.4~2.8s 才出现 —— 带启动落地窗的实际观感是
+                     3.4s 出落地窗、4.8s 主界面可用。
+  · net10.0-windows  可选加速版 —— 自包含单文件（约 74 MB），把 .NET 运行时打进 exe。
+                     同样的窗口只要 0.9~1.2s（启动器 1.3s / 1.7s）。**不发**，因为用户 2026-10-08
+                     拍板选体积。要发就一条命令（见下面"构建"）。
+界面沿用 60US starter 的 WPF 设计系统（沉浸背景 + 毛玻璃面板 + 从原画实时取色）。
+
+目录
+----
+S1a5-Launcher.csproj   工程文件（双目标；只有 net48 才需要 System.Text.Json + Costura 两个包）
+build.cmd              **构建分发版**：dotnet build -f net48 + 自动把 exe 拷进 game\
+App.xaml(.cs)          入口 —— 先弹启动落地窗(SplashWindow)，再装主题字典、过**首次运行的使用协议门禁**、
+                       建主窗口（三步的顺序与原因写在文件里的注释）
+MainWindow.xaml(.cs)   窗口外壳：导航(首页/存档/设置/说明) / 标题栏 / 背景轮播 / 日志胶囊 / 进度
+Core\AppSys.cs         全局服务中枢：日志队列、进度、状态快照、主题与背景目录、启动计时 BootMark
+Core\ArtPalette.cs     原画自适应配色（CAM16/HCT + 和声模板 + WCAG 对比度钳制 + 主题令牌注入）
+Core\ColorScience.cs   颜色数学（CAM16-UCS、CIEDE2000、Oklab、WCAG 对比度）
+Core\Flows.cs          业务流程："开始游戏"一条龙（直接起服务端+进游戏，不开网页 GM）、
+                       服务端启停、网页 GM、存档备份/还原/重开、首次自检、
+                       **缺 Java 25 时自动找包里的安装包并引导安装**（EnsureJavaAsync）
+Core\Ui.cs             对话框（确认/警告/错误/输入/选文件夹/选图片）
+Services\ServerControl.cs  Java 25 探测（逐个候选跑 -version 验 ≥25；**结果带缓存、失败也缓存**，
+                           靠 InvalidateJava 刷新）、**在包内查找 JDK 安装包**（FindJavaInstaller：
+                           有界扫描 *.msi / jdk*.exe）与跑安装包（InstallJavaAsync → msiexec /passive）、
+                           服务端启停（等端口就绪）、网页 GM（-cp fat.jar WebGmMain）、
+                           目录自动定位（**向上 6 级 + 横向 2 层** —— 所以"启动器埋在客户端目录里、
+                           服务端是它的兄弟目录"那种整合包布局也能自动认出来）、
+                           WMI 按命令行识别 java 进程（1.5s TTL 缓存 + 后台预热）、
+                           优雅停止（AttachConsole + Ctrl+C）
+Services\ArchiveService.cs  存档三件套备份/还原/重命名/删除/导入/重开（服务端在跑时拒写）
+Services\LauncherSettings.cs 本地设置（原子写；坏文件留 .bad 证据）。
+                           含 AgreementAccepted（首次运行门禁的确认位；删配置文件即重新确认）
+Services\PortInfo.cs    读系统 TCP 监听表拿"某进程在听的端口"（不 spawn netstat）
+Views\                  HomeView / ArchiveView / SettingsView(目录定位·外观·目录与环境，含 Java 运行环境卡) /
+                        HelpView(7 条大白话说明) / SplashWindow(启动落地窗) / DlgWindow /
+                        AgreementWindow(**首次运行的使用协议门禁**：逐字输入确认短语才能继续，
+                        关窗/Esc/点不同意都直接退出进程 —— 机制照抄 60US starter；
+                        协议正文与那句确认短语是 xaml.cs 顶部的两个常量)
+Themes\                 令牌与控件样式。Brushes.*.xaml / Fluent.*.xaml 的色值由
+                        tests\bake_theme.py 从 ArtPalette 实算结果写回（换背景图后必须重跑）
+图标EXE.ico             exe 图标（ApplicationIcon，多尺寸）
+icon128.png             界面/任务栏图标（Resource）
+BgDefault.jpg           出厂默认背景（编进 exe；换图见 交接文档.md §8）
+app.manifest            asInvoker（不申请管理员权限）+ PerMonitorV2 DPI
+FodyWeavers.xml(.xsd)   Costura 配置（只在 net48 生效）
+目录说明.txt            本文件
+（这里没有 tests\ —— 开发/验收脚本统一放在仓库根的 tests\）
+
+构建
+----
+build.cmd                                            分发版（net48，1.7 MB）→ 直接进 game\
+dotnet publish S1a5-Launcher.csproj -f net10.0-windows -c Release
+                                                     可选加速版（74 MB，自包含）
+（net48 的产物只用到 bin\Release\net48\S1a5-Launcher.exe 一个文件；
+  同目录那个 .exe.config 只是声明目标框架，可以不带 —— 60US 的启动器也没带。）
+
+启动速度（2026-10-08 实测，详见 交接文档.md §5）
+----------------------------------------------
+net48 分发版：双击 → 落地窗 3.4s、主界面可用 4.8s。
+net10 可选版：1.3s / 1.7s。差的那 2 秒里 2.4~2.8s 是 net48 WPF 的 JIT **地板**，改代码下不来。
+改后能快 1 秒多的原因是"先出窗口再干活"：① 先显示不依赖主题字典的落地窗，再装字典/建主窗口，
+主窗口第一帧画完才关它；② 首次自检（找 Java 要起子进程、WMI 要同步等）挪到线程池 +
+Background 优先级。另外主题字典也搬出了 App.xaml（它是在 Main() 里解析的，早于 OnStartup）。
+每次启动往 game\runtime\logs\boot-trace.txt 追加一段毫秒级时间线，卡在哪段一眼可见。
+
+改主题/配色
+----------
+· 换背景图：copy 新图 BgDefault.jpg → python tests\bake_theme.py 启动器源码\BgDefault.jpg 0.30 0.62
+  （把 ArtPalette 实算出的每个令牌写回 Themes\*.xaml，免得"有图"与"无图"两条路颜色不一致）→ build.cmd。
+· 浅色/深色不是"反相"关系。浅色那套的关键约束（2026-10-08 修过，别改回去）：
+  - 浅色面板保底 90% 不透明（深色文字怕透，透出来的深色原画会吃掉对比度）；
+  - 首页两块浮动卡的毛玻璃采样层在浅色下压到 22%（Backdrop 画的是"面板正下方那片背景"，
+    深色原画原样铺在卡片底层 + 深色文字 = 整块读不出来）；
+  - 标题带/底部带的明暗跟着【主题】走，不跟原画走（浅色界面不该被上下两条深色带夹住）；
+  - 视图里的"事件订阅"必须与 Unloaded 严格配对（`if (_ready) return;` 把订阅变成一次性，
+    症状是"去过别的页面再回来，换主题首页就不重绘"）。

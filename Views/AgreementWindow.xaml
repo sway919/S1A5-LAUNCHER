@@ -1,0 +1,100 @@
+<!--
+    ════════════════════════════════════════════════════════════════
+    首次运行 · 使用协议 (AgreementWindow)
+
+    【作用】防倒狗闸门: 第一次打开启动器时, 玩家必须【逐字输入】下面那句
+    确认短语 (含中文标点) 才能点【我同意并继续】。任何"关闭 / Esc / 点不同意"
+    的路径都算不同意, 由 App 直接结束进程 —— 绕过闸门只能真去读那句话。
+
+    机制与参考项目 60US starter 的 Views\AgreementWindow 一致:
+      · 输入与短语逐字符相等 (Ordinal) 才解锁按钮;
+      · 差在哪要提示出来 (长度差 / 标点), 允许整句复制粘贴;
+      · 确认结果只记在启动器配置文件的一位 (AgreementAccepted), 之后不再提示;
+        删掉配置文件就会重新要求确认。
+
+    文案与那句短语由项目方指定, 改文案只改本文件与 AgreementWindow.xaml.cs
+    顶部的两个常量即可。
+    ════════════════════════════════════════════════════════════════
+-->
+<Window x:Class="ServerUI.Views.AgreementWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Icon="pack://application:,,,/icon128.png"
+        AutomationProperties.AutomationId="AgreementWindow"
+        Title="使用协议"
+        Width="680" SizeToContent="Height" MaxHeight="760"
+        WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="NoResize"
+        ShowInTaskbar="True" Background="{DynamicResource Brush.GlassStrong}"
+        FontFamily="Microsoft YaHei UI" MouseLeftButtonDown="Win_Drag">
+
+    <Border CornerRadius="14" Background="{DynamicResource Brush.GlassStrong}"
+            BorderBrush="{DynamicResource Brush.GlassBorder}" BorderThickness="1">
+        <Grid Margin="30,0,30,26">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="76"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 标题 -->
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="42" Height="42" CornerRadius="999" VerticalAlignment="Center"
+                            Background="{DynamicResource Brush.WarnSoft}">
+                        <Path Style="{StaticResource Ico}" Data="{StaticResource IcShield}" Width="20" Height="20"
+                              Stroke="{DynamicResource Brush.Warn}"/>
+                    </Border>
+                    <StackPanel Margin="13,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="使用协议" Style="{StaticResource H2}" FontSize="20"/>
+                        <TextBlock Text="首次运行需确认，确认后不再提示" Style="{StaticResource Txt3}" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+                <Button Style="{StaticResource WinBtnClose}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Width="36" Height="30" Click="Decline_Click" ToolTip="不同意并退出"/>
+            </Grid>
+
+            <!-- 协议正文 -->
+            <Border Grid.Row="1" Background="{DynamicResource Brush.FieldFill}"
+                    BorderBrush="{DynamicResource Brush.FieldBorder}" BorderThickness="1"
+                    CornerRadius="12" Padding="18,16">
+                <ScrollViewer MaxHeight="330" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <TextBlock x:Name="BodyText" Style="{StaticResource Txt2}" TextWrapping="Wrap"
+                               LineHeight="25" FontSize="13.5"/>
+                </ScrollViewer>
+            </Border>
+
+            <!-- 确认输入 -->
+            <StackPanel Grid.Row="2" Margin="0,20,0,0">
+                <TextBlock Style="{StaticResource Txt}" FontWeight="SemiBold"
+                           Text="请逐字输入下面这句话（含标点）后，才能继续："/>
+                <Border Background="{DynamicResource Brush.FieldFill}" CornerRadius="8" Padding="12,9"
+                        Margin="0,9,0,0">
+                    <TextBlock x:Name="PhraseText" Style="{StaticResource Txt2}" TextWrapping="Wrap"
+                               AutomationProperties.AutomationId="AgreementPhrase"
+                               FontWeight="SemiBold" Foreground="{DynamicResource Brush.AccentText}"/>
+                </Border>
+                <TextBox x:Name="Inp" Style="{StaticResource Input}" Margin="0,11,0,0" MinHeight="44"
+                         AutomationProperties.AutomationId="AgreementInput"
+                         TextChanged="Inp_TextChanged" AcceptsReturn="False"
+                         ToolTip="粘贴也可以，但必须与上面那句完全一致（前后空格会被忽略）"/>
+                <TextBlock x:Name="Hint" Style="{StaticResource Txt3}" Margin="0,8,0,0"
+                           AutomationProperties.AutomationId="AgreementHint"
+                           Text="还没输入。" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- 按钮 -->
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
+                <Button Style="{StaticResource BtnQuiet}" Content="不同意，退出" MinWidth="140" Height="40"
+                        Click="Decline_Click"/>
+                <Button x:Name="BtOk" Style="{StaticResource BtnStart}" Content="我同意并继续" MinWidth="170" Height="40"
+                        Margin="12,0,0,0" IsEnabled="False" IsDefault="True"
+                        AutomationProperties.AutomationId="AgreementOk" Click="Accept_Click"/>
+            </StackPanel>
+
+            <TextBlock Grid.Row="4" Style="{StaticResource Txt3}" Margin="0,14,0,0" TextWrapping="Wrap"
+                       Text="提示：不接受协议将无法使用本启动器。确认状态保存在本程序目录的配置文件里，删掉配置文件即可重新确认。"/>
+        </Grid>
+    </Border>
+</Window>

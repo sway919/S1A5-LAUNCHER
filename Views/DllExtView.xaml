@@ -1,0 +1,218 @@
+<!--
+    ════════════════════════════════════════════════════════════════
+    DLL 扩展 —— 插件管理页 (S1A5 / ACT5 口径)
+
+    客户端目录里的 DumpReport.dll 是扩展宿主 (源码在仓库
+    服务端源码\tools\A5\ext_host.cpp): 客户端启动时它先把 A5.dll 拉进进程
+    (A5.dll 照旧是"必须的客户端补丁"), 再由延迟线程读同目录 dll_ext.ini,
+    按 [plugins] 段的行序逐个 LoadLibrary, 结果写同目录 dll_ext.log。
+    本页 = 那份 ini 的图形管理: 导入 → 勾选 → 点【应用更改】写进客户端。
+
+    应用更改 = 复制 dll 进客户端目录 + 注册进 dll_ext.ini (写后回读校验);
+    全部撤下 = 删文件 + 移除条目 + 恢复被覆盖的原文件 (如有备份)。
+    A5.dll 那一行是【必选, 不可关闭】—— 它不是插件, 不进 ini、不参与挂载/撤下,
+    这里只显示"在不在客户端目录"。
+
+    版式说明: 列表右侧留出 500px —— 运行日志面板固定在窗口右下角,
+    展开时不会盖住列表里的开关与按钮 (与存档页同款纪律; 参考实现 60US 那边
+    把操作卡放在右列, 会被展开的日志压住, ACT5 这里改成一列 + 顶部操作条)。
+    ════════════════════════════════════════════════════════════════
+-->
+<UserControl x:Class="ServerUI.Views.DllExtView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Margin="108,56,22,64">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 顶部说明条 -->
+        <Border Style="{StaticResource GlassCard}" Padding="16,12" Margin="0,0,0,12">
+            <DockPanel>
+                <Path DockPanel.Dock="Left" Style="{StaticResource Ico}" Data="{StaticResource IcChip}"
+                      Width="18" Height="18" Margin="0,1,12,0" Stroke="{DynamicResource Brush.Accent}"
+                      VerticalAlignment="Top"/>
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Txt}" FontWeight="SemiBold" Text="DLL 扩展（客户端插件管理）"/>
+                    <TextBlock x:Name="LbDir" Style="{StaticResource Txt3}" TextWrapping="Wrap"
+                               Margin="0,4,0,0" LineHeight="19" Text="扩展目录：--"/>
+                    <TextBlock Style="{StaticResource Txt3}" TextWrapping="Wrap" Margin="0,4,0,0" LineHeight="19"
+                               Text="把 .dll 收进扩展目录，勾选要用的，点【应用更改】：文件复制进客户端目录并写进 dll_ext.ini，游戏启动时由客户端自带的扩展宿主逐个加载（不碰客户端原有 DLL；同名旧文件会先备份到 备份\ 里）。【全部撤下】删掉挂载的文件、移除 ini 条目并恢复备份。应用更改前请先完全退出游戏 —— 游戏运行时这些 dll 被占用，装不进去。"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- 操作条 (按钮全在顶部这一条里, 展开的日志面板盖不到) -->
+        <Border Grid.Row="1" Style="{StaticResource GlassCard}" Padding="16,12" Margin="0,0,0,12">
+            <DockPanel>
+                <WrapPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button Style="{StaticResource BtnAccent}" Content="应用更改" Height="34" Width="120"
+                            Margin="0,0,8,0" Click="Apply_Click"
+                            ToolTip="把勾选启用的 dll 复制进客户端目录并写进 dll_ext.ini（同名旧文件先备份）；写入后回读校验"/>
+                    <Button Style="{StaticResource BtnGlass}" Content="全部撤下（恢复原状）" Height="34" Width="180"
+                            Margin="0,0,8,0" Click="Undeploy_Click"
+                            ToolTip="删掉挂载进客户端的文件、移除 ini 条目，并恢复被覆盖的原文件（如有备份）"/>
+                    <Button Style="{StaticResource BtnGlass}" Content="导入 DLL" Height="34" Width="110"
+                            Margin="0,0,8,0" Click="Import_Click"
+                            ToolTip="把一个或多个 .dll 收进扩展目录（随件的 .plugin.json 说明一并收下）"/>
+                    <Button Style="{StaticResource BtnGlass}" Content="打开扩展目录" Height="34" Width="130"
+                            Margin="0,0,8,0" Click="OpenDir_Click"/>
+                    <Button Style="{StaticResource BtnGlass}" Content="打开客户端目录" Height="34" Width="140"
+                            Margin="0,0,8,0" Click="OpenClientDir_Click"/>
+                    <Button Style="{StaticResource BtnGlass}" Content="打开日志" Height="34" Width="110"
+                            Margin="0,0,8,0" Click="OpenLog_Click"
+                            ToolTip="在资源管理器里选中客户端的 dll_ext.log（每次启动游戏都会重写它）"/>
+                    <Button Style="{StaticResource BtnSmall}" Content="刷新" Height="34" Width="70"
+                            Margin="0,0,8,0" Click="Refresh_Click" VerticalAlignment="Center"/>
+                </WrapPanel>
+
+                <!-- 读数: 挂载状态 / 客户端上次的加载结果 -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,24,0">
+                        <TextBlock Text="挂载状态" Style="{StaticResource Cap}" Margin="0,0,0,5"/>
+                        <TextBlock x:Name="LbState" Style="{StaticResource Txt}" Text="--"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="客户端上次的加载结果（dll_ext.log）" Style="{StaticResource Cap}" Margin="0,0,0,5"/>
+                        <TextBlock x:Name="LbLog" Style="{StaticResource Txt2}" TextWrapping="Wrap" Text="--"/>
+                    </StackPanel>
+                </Grid>
+            </DockPanel>
+        </Border>
+
+        <!-- 插件列表 (右侧留出运行日志的位置) -->
+        <Border Grid.Row="2" Style="{StaticResource GlassCard}" Margin="0,0,500,0" Padding="14,12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="1"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="1"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Margin="0,0,0,10">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="扩展件" Style="{StaticResource H2}"/>
+                        <TextBlock x:Name="LbCount" Style="{StaticResource Txt3}" Margin="10,0,0,0"
+                                   VerticalAlignment="Bottom"/>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource Txt3}" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                               Text="每行最前的 ⋮ 手柄按住上下拖动 = 调整加载顺序（松手即存）。"/>
+                </Grid>
+
+                <!-- A5.dll: 必选, 不可关闭 (照客户端补丁的定位 —— 不是插件, 不进 ini) -->
+                <!-- 列宽与下面插件行的模板一致: 手柄 / 开关 / 名称说明 / 体积 / 状态 / 操作 -->
+                <Border Grid.Row="2" Padding="10,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="76"/>
+                            <ColumnDefinition Width="64"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 没有拖拽手柄: 固定首位, 不可调序 -->
+                        <Border Grid.Column="0" Background="Transparent" Width="20" Margin="0,0,4,0"
+                                ToolTip="必选补丁，位置固定，不参与排序">
+                            <TextBlock Text="—" FontSize="13" Foreground="{DynamicResource Brush.Text3}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+
+                        <ToggleButton Grid.Column="1" Style="{StaticResource Switch}" IsChecked="True"
+                                      IsEnabled="False" VerticalAlignment="Center"
+                                      ToolTip="A5.dll 是客户端补丁（必选，不可关闭）：没有它击杀不上报、怪物打不死"/>
+
+                        <StackPanel Grid.Column="2" Margin="4,0,10,0">
+                            <TextBlock Style="{StaticResource Txt}" FontWeight="SemiBold"
+                                       Text="A5.dll（必选，不可关闭）"/>
+                            <TextBlock x:Name="LbA5" Style="{StaticResource Txt3}" Margin="0,2,0,0"
+                                       TextWrapping="Wrap" Text="--"/>
+                        </StackPanel>
+
+                        <TextBlock x:Name="LbA5Flag" Grid.Column="4" Style="{StaticResource Txt3}"
+                                   VerticalAlignment="Center" Text="--"/>
+
+                        <StackPanel Grid.Column="5" Orientation="Horizontal">
+                            <Button Style="{StaticResource BtnSmall}" Content="详细" Click="A5Detail_Click"
+                                    ToolTip="这个补丁是干什么的、为什么关不掉"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="3" Background="{DynamicResource Brush.Sep}"/>
+
+                <ListBox x:Name="Lst" Grid.Row="4" Margin="0,8,0,0" Background="Transparent"
+                         BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         MouseMove="Lst_MouseMove" MouseLeftButtonUp="Lst_MouseUp" MouseLeave="Lst_MouseLeave">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource RowItem}">
+                            <Setter Property="Padding" Value="10,8"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="76"/>
+                                    <ColumnDefinition Width="64"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- 拖拽手柄: 按住拖动 = 调整顺序 (顺序 = 写进 dll_ext.ini 的条目顺序, 靠前的先加载) -->
+                                <Border Grid.RowSpan="2" Background="Transparent" Cursor="SizeAll"
+                                        MouseLeftButtonDown="Drag_HandleDown" Margin="0,0,4,0"
+                                        ToolTip="按住上下拖动调整顺序；顺序 = 写进 dll_ext.ini 的条目顺序（靠前的先加载）">
+                                    <TextBlock Text="⋮" FontSize="16" FontWeight="Bold" Margin="2,0,2,0"
+                                               Foreground="{DynamicResource Brush.Text3}" VerticalAlignment="Center"/>
+                                </Border>
+
+                                <ToggleButton Grid.RowSpan="2" Grid.Column="1" Style="{StaticResource Switch}" Tag="{Binding}"
+                                              VerticalAlignment="Center"
+                                              IsChecked="{Binding Enabled, Mode=TwoWay}"
+                                              Checked="Sw_Changed" Unchecked="Sw_Changed"
+                                              ToolTip="勾选 = 启用（点【应用更改】时才装进客户端）"/>
+
+                                <StackPanel Grid.Column="2" Margin="4,0,10,0">
+                                    <TextBlock Text="{Binding Name}" Style="{StaticResource Txt}" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding SummaryText}" Style="{StaticResource Txt3}"
+                                               Margin="0,2,0,0" TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding SummaryText}"/>
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="3" Text="{Binding SizeText}" Style="{StaticResource Txt2}"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="4" Text="{Binding StateText}" Style="{StaticResource Txt3}"
+                                           VerticalAlignment="Center"/>
+
+                                <StackPanel Grid.Column="5" Orientation="Horizontal">
+                                    <Button Style="{StaticResource BtnSmall}" Content="详细" Tag="{Binding}" Click="Detail_Click"
+                                            ToolTip="查看完整说明：功能、注意事项、版本、作者、说明来源"/>
+                                    <Button Style="{StaticResource BtnSmall}" Content="删除" Margin="6,0,0,0"
+                                            Tag="{Binding}" Click="Delete_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

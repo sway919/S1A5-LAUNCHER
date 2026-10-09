@@ -1,0 +1,9 @@
+<Weavers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="FodyWeavers.xsd">
+  <!--
+    Costura: 把托管依赖 (System.Text.Json 及其依赖链) 全部内嵌进 EXE。
+    WPF 框架程序集本身属于 .NET Framework (系统 GAC), 不会被内嵌,
+    所以最终产物就是一个 1~3 MB 的单文件 EXE, 玩家不需要安装 .NET 10。
+    IncludeDebugSymbols=false: 本项目不产出 pdb, 不内嵌符号可少几十 KB。
+  -->
+  <Costura IncludeDebugSymbols="false" />
+</Weavers>

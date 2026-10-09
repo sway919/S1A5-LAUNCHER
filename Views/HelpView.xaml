@@ -1,0 +1,71 @@
+<!--
+    ════════════════════════════════════════════════════════════════
+    使用说明 — 左侧目录 + 右侧正文
+      正文内容为 S1A5 / ACT5 单机端的说明 (取自 一键端\使用说明.txt 与仓库文档),
+      并补上启动器自己的行为说明 (锁、备份、账号)。
+
+      注意: 这里不与 一键端\使用说明.txt 逐字一致 —— 本页跟着启动器的措辞走
+      (单机口吻), 两份内容对不上时以本页为准。
+    ════════════════════════════════════════════════════════════════
+-->
+<UserControl x:Class="ServerUI.Views.HelpView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- 右边距与【存档】【设置】保持一致 (22): 原来是 500, 正文被压成窄条、
+         窗口右侧留一大片空白。 -->
+    <Grid Margin="108,56,22,64">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="266"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 目录 -->
+        <Border Style="{StaticResource GlassCard}" Margin="0,0,12,0" Padding="14,12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="1"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="目录" Style="{StaticResource H2}" Margin="0,0,0,10"/>
+                <Border Grid.Row="1" Background="{DynamicResource Brush.Sep}"/>
+                <!-- DisplayMemberPath 必须写在 XAML 里: 之前在代码里"先设 ItemsSource 再设
+                     DisplayMemberPath", 结果列表里只出现空白项 (模板没吃到 Title)。 -->
+                <ListBox x:Name="Lst" Grid.Row="2" Margin="0,8,0,0" Background="Transparent"
+                         BorderThickness="0" SelectionChanged="Lst_SelectionChanged"
+                         DisplayMemberPath="Title"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource RowItem}">
+                            <Setter Property="Padding" Value="10,9"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </Grid>
+        </Border>
+
+        <!-- 正文 -->
+        <Border Grid.Column="1" Style="{StaticResource GlassCard}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="1"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <StackPanel Margin="0,0,0,12">
+                    <TextBlock x:Name="Title" Style="{StaticResource H2}" FontSize="20" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="Sub" Style="{StaticResource Txt3}" Margin="0,5,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Border Grid.Row="1" Background="{DynamicResource Brush.Sep}"/>
+                <!-- 横向滚动必须【禁用】: 默认 Auto 会给内容无限宽度, 正文 TextBlock 就按
+                     MaxWidth 排版、右侧被裁掉 (实测就是"文字被切一半")。禁用后按面板宽度换行。 -->
+                <ScrollViewer Grid.Row="2" Margin="0,12,0,0"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="Body"/>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

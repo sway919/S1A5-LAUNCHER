@@ -1,0 +1,50 @@
+<!--
+    通用玻璃对话框 — 替代系统 MessageBox:
+      图标 + 标题 + 正文 + 按钮组 (是/否/取消), 无系统边框, Esc=取消, Enter=默认
+    用法: DlgWindow.Info/Warn/Error/Confirm  (Ui.* 内部调用)
+-->
+<Window x:Class="ServerUI.Views.DlgWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Icon="pack://application:,,,/icon128.png"
+        Width="560" SizeToContent="Height" MaxHeight="720"
+        WindowStartupLocation="CenterOwner" WindowStyle="None" ResizeMode="NoResize"
+        ShowInTaskbar="False" Background="{DynamicResource Brush.GlassStrong}"
+        FontFamily="Microsoft YaHei UI" MouseLeftButtonDown="Win_Drag">
+
+    <Grid>
+        <Border CornerRadius="12" Background="{DynamicResource Brush.GlassStrong}"
+                BorderBrush="{DynamicResource Brush.GlassBorder}" BorderThickness="1">
+            <Grid Margin="28,0,28,24">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="72"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 标题行: 图标 + 标题 + 关闭 -->
+                <Grid>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border x:Name="IconCircle" Width="40" Height="40" CornerRadius="999" VerticalAlignment="Center">
+                            <Path x:Name="IconPath" Style="{StaticResource Ico}" Width="19" Height="19"/>
+                        </Border>
+                        <TextBlock x:Name="TitleText" Style="{StaticResource H2}" FontSize="20"
+                                   Margin="12,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button Style="{StaticResource WinBtnClose}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Width="36" Height="30" Click="Cancel_Click"/>
+                </Grid>
+
+                <!-- 正文 -->
+                <ScrollViewer Grid.Row="1" MaxHeight="400" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <TextBlock x:Name="BodyText" Style="{StaticResource Txt2}" TextWrapping="Wrap" LineHeight="24"
+                               FontSize="14"/>
+                </ScrollViewer>
+
+                <!-- 按钮组 -->
+                <StackPanel x:Name="BtnBar" Grid.Row="2" Orientation="Horizontal"
+                            HorizontalAlignment="Right" Margin="0,22,0,0"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

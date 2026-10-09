@@ -1,0 +1,266 @@
+<!--
+    ════════════════════════════════════════════════════════════════
+    设置页 — 分区: 目录定位 / 外观 / 目录与环境
+
+      【为什么只有这三块】
+      ACT5 客户端不带 config.cfg（画质在游戏内的设置界面里改）, 服务端也没有
+      负载模式 —— 所以参考项目(60US)里的「画面 / 字体 / 性能」三个分区在这一版
+      全部删掉了, 不留"点了没反应"的假控件。这里的三块都是真会生效的:
+        · 目录定位   —— 服务端包 / 客户端目录, 写进启动器自己的配置文件;
+        · 外观       —— 主题、背景图、毛玻璃/遮罩/融合度, 即时生效;
+        · 目录与环境 —— 进游戏的账号密码、环境信息。
+    ════════════════════════════════════════════════════════════════
+-->
+<UserControl x:Class="ServerUI.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Margin="108,56,64,64">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="46"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 分区导航: 压在自己的承载面板上 (裸浮在背景上会看不清) -->
+        <Border Style="{StaticResource GlassCard}" Padding="12,0" Height="46" VerticalAlignment="Top">
+        <Grid>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                <RadioButton x:Name="RbG0" Style="{StaticResource Tab}" Height="41" GroupName="setnav" Content="目录定位"
+                             Tag="0" IsChecked="True" Checked="Nav_Changed"/>
+                <RadioButton x:Name="RbG1" Style="{StaticResource Tab}" Height="41" GroupName="setnav" Content="外观"
+                             Tag="1" Checked="Nav_Changed"/>
+                <RadioButton x:Name="RbG2" Style="{StaticResource Tab}" Height="41" GroupName="setnav" Content="目录与环境"
+                             Tag="2" Checked="Nav_Changed"/>
+            </StackPanel>
+            <Border Height="1" VerticalAlignment="Bottom" Background="{DynamicResource Brush.Sep}"/>
+        </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" x:Name="Host" Margin="0,10,0,0">
+
+            <!-- ============ P0 目录定位 ============ -->
+            <ScrollViewer x:Name="Pn0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+                <Border Style="{StaticResource GlassCard}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="目录定位" Style="{StaticResource H2}" Margin="0,0,0,12"/>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110"/><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="服务端目录" Style="{StaticResource Txt2}" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="LblSrv" Grid.Column="1" Style="{StaticResource Txt}" Text="未定位"
+                                       TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,14,0"
+                                       ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                            <Button Grid.Column="2" Style="{StaticResource BtnAccent}" Content="定位服务端目录"
+                                    Height="34" Click="LocSrv_Click"/>
+                        </Grid>
+                        <TextBlock Style="{StaticResource Txt3}" TextWrapping="Wrap" Margin="110,4,0,0" LineHeight="18"
+                                   Text="选 server\ 里放着 s1a5-*-all.jar 的那一层（一键端根目录）。"/>
+
+                        <Grid Margin="0,16,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110"/><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="客户端目录" Style="{StaticResource Txt2}" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="LblCli" Grid.Column="1" Style="{StaticResource Txt}" Text="未定位"
+                                       TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,14,0"
+                                       ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                            <Button Grid.Column="2" Style="{StaticResource BtnAccent}" Content="定位客户端目录"
+                                    Height="34" Click="LocCli_Click"/>
+                        </Grid>
+                        <TextBlock Style="{StaticResource Txt3}" TextWrapping="Wrap" Margin="110,4,0,0" LineHeight="18"
+                                   Text="选 DNF.exe 与 Script.pvf 所在的那一层。"/>
+
+                        <Border Height="1" Background="{DynamicResource Brush.Sep}" Margin="0,16"/>
+
+                        <StackPanel Orientation="Horizontal">
+                            <Button Style="{StaticResource BtnGlass}" Content="重新自动搜索" Height="34" Width="140"
+                                    Click="AutoFind_Click" ToolTip="按 EXE 所在位置向上/向下有限搜索一次"/>
+                            <Button Style="{StaticResource BtnGlass}" Content="打开启动器目录" Height="34" Width="150"
+                                    Margin="10,0,0,0" Click="OpenExeDir_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ============ P1 外观 ============ -->
+            <ScrollViewer x:Name="Pn1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <Border Style="{StaticResource GlassCard}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="外观" Style="{StaticResource H2}" Margin="0,0,0,12"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Style="{StaticResource BtnAccent}" Content="导入背景图片" Height="36" Width="150"
+                                    Click="ImportBg_Click" ToolTip="支持 PNG/JPG/BMP/GIF，可多选"/>
+                            <Button Style="{StaticResource BtnGlass}" Content="打开背景目录" Height="36" Width="140"
+                                    Margin="10,0,0,0" Click="OpenBgDir_Click"/>
+                            <Button Style="{StaticResource BtnGlass}" Content="恢复出厂背景" Height="36" Width="140"
+                                    Margin="10,0,0,0" Click="ResetBg_Click"
+                                    ToolTip="清除导入的背景，恢复内置的出厂主视觉"/>
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource Txt3}" TextWrapping="Wrap" Margin="0,12,0,0" LineHeight="19"
+                                   Text="导入的图片保存在程序目录 configs\背景\，多张时可在首页用屏幕两侧的箭头轮播切换。背景图只在本地使用，不会上传。也可以直接把图片拖到窗口任意位置。"/>
+
+                        <Grid Margin="0,18,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="背景遮罩浓度" Style="{StaticResource Txt2}" VerticalAlignment="Center"/>
+                            <Slider x:Name="SldOverlay" Grid.Column="1" Style="{StaticResource HSlider}"
+                                    Width="240" Minimum="0" Maximum="0.9" VerticalAlignment="Center"
+                                    ValueChanged="SldOverlay_ValueChanged"/>
+                            <TextBlock x:Name="LblOv" Grid.Column="2" Style="{StaticResource Txt3}" Text="45%"
+                                       VerticalAlignment="Center" Margin="14,0,0,0"/>
+                        </Grid>
+                        <TextBlock Style="{StaticResource Txt3}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="19"
+                                   Text="存档、设置、说明页会把背景压暗到这个浓度，保证文字读得清；首页不压。"/>
+
+                        <Grid Margin="0,18,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="上下渐隐浓度" Style="{StaticResource Txt2}" VerticalAlignment="Center"/>
+                            <Slider x:Name="SldScrim" Grid.Column="1" Style="{StaticResource HSlider}"
+                                    Width="240" Minimum="0" Maximum="1" VerticalAlignment="Center"
+                                    ValueChanged="SldScrim_ValueChanged"/>
+                            <TextBlock x:Name="LblScrim" Grid.Column="2" Style="{StaticResource Txt3}" Text="30%"
+                                       VerticalAlignment="Center" Margin="14,0,0,0"/>
+                        </Grid>
+                        <TextBlock Style="{StaticResource Txt3}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="19"
+                                   Text="顶部与底部渐隐带的浓度，压住标题栏和日志的文字。0% 就是不压，默认 30%。"/>
+
+                        <Grid Margin="0,18,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="毛玻璃模糊" Style="{StaticResource Txt2}" VerticalAlignment="Center"/>
+                            <Slider x:Name="SldBlur" Grid.Column="1" Style="{StaticResource HSlider}"
+                                    Width="240" Minimum="0" Maximum="40" VerticalAlignment="Center"
+                                    ValueChanged="SldBlur_ValueChanged"/>
+                            <TextBlock x:Name="LblBlur" Grid.Column="2" Style="{StaticResource Txt3}" Text="16 px"
+                                       VerticalAlignment="Center" Margin="14,0,0,0"/>
+                        </Grid>
+                        <TextBlock Style="{StaticResource Txt3}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="19"
+                                   Text="首页面板把背后的背景做高斯模糊。0 关闭。"/>
+
+                        <Grid Margin="0,18,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="面板不透明度" Style="{StaticResource Txt2}" VerticalAlignment="Center"/>
+                            <Slider x:Name="SldOpac" Grid.Column="1" Style="{StaticResource HSlider}"
+                                    Width="240" Minimum="0.35" Maximum="1" VerticalAlignment="Center"
+                                    ValueChanged="SldOpac_ValueChanged"/>
+                            <TextBlock x:Name="LblOpac" Grid.Column="2" Style="{StaticResource Txt3}" Text="62%"
+                                       VerticalAlignment="Center" Margin="14,0,0,0"/>
+                        </Grid>
+                        <TextBlock Style="{StaticResource Txt3}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="19"
+                                   Text="面板越透，毛玻璃越明显。浅色主题最低保底 78%，深色可以放心调低。"/>
+
+                        <Grid Margin="0,18,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="原画融合度" Style="{StaticResource Txt2}" VerticalAlignment="Center"/>
+                            <Slider x:Name="SldFusion" Grid.Column="1" Style="{StaticResource HSlider}"
+                                    Width="240" Minimum="0" Maximum="1" VerticalAlignment="Center"
+                                    ValueChanged="SldFusion_ValueChanged"/>
+                            <TextBlock x:Name="LblFu" Grid.Column="2" Style="{StaticResource Txt3}" Text="30%"
+                                       VerticalAlignment="Center" Margin="14,0,0,0"/>
+                        </Grid>
+                        <TextBlock Style="{StaticResource Txt3}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="19"
+                                   Text="界面配色跟随背景原图的程度：0% 纯黑白，30% 只带一点原图色温，100% 完全跟随。拖动即时生效。"/>
+                    </StackPanel>
+                </Border>
+            </ScrollViewer>
+
+            <!-- ============ P2 目录与环境 ============ -->
+            <ScrollViewer x:Name="Pn2" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+                    <Border Style="{StaticResource GlassCard}" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Text="打开目录" Style="{StaticResource H2}" Margin="0,0,0,12"/>
+                            <UniformGrid Columns="4">
+                                <Button Style="{StaticResource BtnGlass}" Content="服务端目录" Height="36" Margin="0,0,10,0" Click="OpenSrv_Click"/>
+                                <Button Style="{StaticResource BtnGlass}" Content="客户端目录" Height="36" Margin="0,0,10,0" Click="OpenCli_Click"/>
+                                <Button Style="{StaticResource BtnGlass}" Content="存档备份" Height="36" Margin="0,0,10,0" Click="OpenBak_Click"/>
+                                <Button Style="{StaticResource BtnGlass}" Content="启动器日志" Height="36" Click="OpenLog_Click"/>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+                    <!-- Java 运行环境: 服务端是 Java 25 字节码, 没它起不来。
+                         包里通常带了安装包, 这里给一条"一键把它装上"的路。 -->
+                    <Border Style="{StaticResource GlassCard}" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Text="Java 运行环境" Style="{StaticResource H2}" Margin="0,0,0,4"/>
+                            <TextBlock Style="{StaticResource Txt3}" TextWrapping="Wrap" LineHeight="19"
+                                       Text="服务端要靠 Java 25 才跑得起来。启动器会自己在包里找 JDK 安装包（约定放在「所需环境安装包」这类目录里），没装的话下面点一下就能装。"/>
+                            <Grid Margin="0,14,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110"/><ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="当前 Java" Style="{StaticResource Txt2}" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="LblJava" Grid.Column="1" Style="{StaticResource Txt}"
+                                           TextWrapping="Wrap" VerticalAlignment="Center"
+                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                            </Grid>
+                            <Grid Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110"/><ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="包里的安装包" Style="{StaticResource Txt2}" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="LblJavaMsi" Grid.Column="1" Style="{StaticResource Txt3}"
+                                           TextWrapping="Wrap" VerticalAlignment="Center"
+                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                            </Grid>
+                            <StackPanel Orientation="Horizontal" Margin="110,16,0,0">
+                                <Button x:Name="BtInstallJava" Style="{StaticResource BtnAccent}" Content="安装 Java 25"
+                                        Height="36" Width="150" Click="InstallJava_Click"/>
+                                <Button Style="{StaticResource BtnGlass}" Content="重新检测" Height="36" Width="110"
+                                        Margin="10,0,0,0" Click="RecheckJava_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource GlassCard}" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Text="进游戏的账号" Style="{StaticResource H2}" Margin="0,0,0,4"/>                            <TextBlock Style="{StaticResource Txt3}" TextWrapping="Wrap" LineHeight="19"
+                                       Text="ACT5 客户端没有登录界面 —— 账号和密码写在它的命令行上，由启动器拼进去，服务端拿这份去库里核对。库里没有这个账号时，连上去会自动建一个（所以换个账号名就是一份全新的角色列表）。"/>
+                            <Grid Margin="0,16,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110"/><ColumnDefinition Width="260"/><ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="账号" Style="{StaticResource Txt2}" VerticalAlignment="Center"/>
+                                <TextBox x:Name="TxtAccount" Grid.Column="1" Style="{StaticResource Input}"
+                                         MaxLength="20" TextChanged="Acct_Changed"/>
+                                <TextBlock x:Name="LblAcctTip" Grid.Column="2" Style="{StaticResource Txt3}"
+                                           VerticalAlignment="Center" Margin="14,0,0,0" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110"/><ColumnDefinition Width="260"/><ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="密码" Style="{StaticResource Txt2}" VerticalAlignment="Center"/>
+                                <TextBox x:Name="TxtPassword" Grid.Column="1" Style="{StaticResource Input}"
+                                         MaxLength="20" TextChanged="Acct_Changed"/>
+                                <TextBlock x:Name="LblPwdTip" Grid.Column="2" Style="{StaticResource Txt3}"
+                                           VerticalAlignment="Center" Margin="14,0,0,0" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Button x:Name="BtSaveAcct" Style="{StaticResource BtnGlass}" Content="保存账号" Height="36" Width="140"
+                                    HorizontalAlignment="Left" Margin="110,16,0,0" Click="SaveAcct_Click"/>
+                            <TextBlock Style="{StaticResource Txt3}" TextWrapping="Wrap" LineHeight="19" Margin="110,10,0,0"
+                                       Text="存进启动器自己的配置文件（明文 —— 客户端本来就是明文传的）。两个都不能留空：客户端的命令行分段不允许空串。"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource GlassCard}">
+                        <StackPanel>
+                            <TextBlock Text="环境信息" Style="{StaticResource H2}" Margin="0,0,0,12"/>
+                            <TextBlock x:Name="LblEnv" Style="{StaticResource Txt3}" TextWrapping="Wrap" LineHeight="20"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>
