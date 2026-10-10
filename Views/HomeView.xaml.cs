@@ -36,13 +36,17 @@ public partial class HomeView : UserControl, MainWindow.IHomeHooks, MainWindow.I
                 _hooked = true;
                 AppSys.StatusChanged += OnStatus;
                 AppSys.ArtChanged += ScheduleSurfaces;
+                AppSys.LogExpandChanged += OnLogExpand;
                 SizeChanged += (a, b) => ScheduleSurfaces();
             }
             if (!_ready)
             {
                 _ready = true;
                 ApplyTabs();
+                SetFlickerSwitch(AppSys.Settings.FlickerFixEnabled);   // 开关回填上次的状态
             }
+            // 上次离开页面后日志面板可能被展开过 (订阅断了没听到) —— 进页面时按当前状态对齐
+            CardFlicker.Visibility = AppSys.LogExpanded ? Visibility.Collapsed : Visibility.Visible;
             OnStatus();
             // 重新进页面时按"当前主题/当前背景"重画一次 (别沿用上次离开时的底色)
             ApplySurfaces();
@@ -53,6 +57,7 @@ public partial class HomeView : UserControl, MainWindow.IHomeHooks, MainWindow.I
             _hooked = false;
             AppSys.StatusChanged -= OnStatus;
             AppSys.ArtChanged -= ScheduleSurfaces;
+            AppSys.LogExpandChanged -= OnLogExpand;
         };
     }
 
@@ -220,6 +225,9 @@ public partial class HomeView : UserControl, MainWindow.IHomeHooks, MainWindow.I
         }
 
         BtStopRound.Visibility = L.Srv ? Visibility.Visible : Visibility.Collapsed;
+
+        // 8. 闪屏修复开关的状态点 (灰=没开 / 青=已部署 / 橙=开了但没就位)
+        UpdateFlickerDot();
     }
 
     /* 状态点: 颜色 + 同色辉光 + 运行中呼吸 */
@@ -315,6 +323,48 @@ public partial class HomeView : UserControl, MainWindow.IHomeHooks, MainWindow.I
         AppSys.Log(">>> 点击了 GM 工具", "gold");
         await Flows.OpenGmTool();
         OnStatus();
+    }
+
+    // =================================================================
+    // 闪屏修复开关 (运行日志胶囊正上方; 逻辑在 Flows.ApplyFlickerFixAsync)
+    // =================================================================
+    /* 勾选 = 把随包的 防闪屏补丁\ 复制进客户端根目录; 取消 = 撤下并恢复原状。
+     * 补丁文件要不要真的动、游戏在跑怎么办, 全在 Flows/FlickerFixService 里管 ——
+     * 这里只负责: 开关状态写进设置 (由 Flows 落盘) + 被拦下时把开关弹回。 */
+    bool _flickerSuppress;   // 代码里回填 IsChecked 会再次触发 Toggled, 用它把那一圈静音
+
+    void SetFlickerSwitch(bool on)
+    {
+        _flickerSuppress = true;
+        TgFlicker.IsChecked = on;
+        _flickerSuppress = false;
+    }
+
+    async void FlickerFix_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_flickerSuppress) return;
+        var on = TgFlicker.IsChecked == true;
+        var ok = await Flows.ApplyFlickerFixAsync(on);
+        if (!ok) SetFlickerSwitch(!on);      // 被拦下 (游戏在跑 / 流程在跑) → 弹回并提示
+        UpdateFlickerDot();
+    }
+
+    /// <summary>开关的状态点: 灰=没开 · 青=已部署 · 橙=开了但没就位 (客户端未定位/补丁文件夹缺失/上次失败)</summary>
+    void UpdateFlickerDot()
+    {
+        if (Df == null) return;
+        if (TgFlicker.IsChecked != true) { SetDot(Df, DotState.Idle); return; }
+        var ok = ServerControl.IsValidClient(AppSys.ClientDir)
+              && FlickerFixService.IsDeployedAt(AppSys.ClientDir);
+        SetDot(Df, ok ? DotState.Ok : DotState.Warn);
+    }
+
+    /* 运行日志面板展开时会盖住开关胶囊 —— 展开期间让位, 收起再回来
+       (事件由 MainWindow.SetLogExpanded 触发; 订阅/退订在 Loaded/Unloaded 严格配对) */
+    void OnLogExpand(bool expanded)
+    {
+        if (CardFlicker == null) return;
+        CardFlicker.Visibility = expanded ? Visibility.Collapsed : Visibility.Visible;
     }
 
     // =================================================================

@@ -7,6 +7,8 @@
           - 快捷: 打开各类目录 + A5.dll 补丁状态说明
       · 右下 指挥台: GM 工具 · 停止 · 重启 · 开始游戏
       · 底部: 运行日志胶囊 (主窗口) 悬在两卡之下
+      · 日志胶囊正上方: 【闪屏修复】开关 (状态点 + Switch; 部署/撤下见 Services\FlickerFixService.cs,
+        日志面板展开时自动让位)
 
     设计纪律: 青蓝 = 次级行动/选中, 金 = 唯一主行动; 不出现大面积白色实心块。
     ════════════════════════════════════════════════════════════════
@@ -317,5 +319,23 @@
                 </Button>
             </StackPanel>
         </ContentControl>
+
+        <!-- ════════════ 闪屏修复开关 (运行日志胶囊正上方; 日志面板展开时让位, 见 AppSys.LogExpandChanged) ════════════
+             勾选 = 把随包的 防闪屏补丁\ (dgVoodoo2) 复制进客户端根目录, 解决闪屏;
+             取消 = 撤下并恢复原状。逻辑在 Services\FlickerFixService.cs + Flows.ApplyFlickerFixAsync。 -->
+        <Border x:Name="CardFlicker" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                Margin="0,0,26,218" Height="40" CornerRadius="12"
+                Background="{DynamicResource Brush.GlassStrong}"
+                BorderBrush="{DynamicResource Brush.GlassEdge}" BorderThickness="1"
+                ToolTip="闪屏修复（dgVoodoo 补丁）&#x0a;勾选：自动把启动器旁边的【防闪屏补丁】文件夹复制进游戏客户端目录，解决进游戏后画面闪屏。&#x0a;取消勾选：移除补丁并恢复原文件。&#x0a;补丁文件夹要和启动器放在一起（找不到时会自动向上层找两级）。">
+            <StackPanel Orientation="Horizontal" Margin="14,0,14,0" VerticalAlignment="Center">
+                <Ellipse x:Name="Df" Width="7" Height="7" Fill="{DynamicResource Brush.Text3}" VerticalAlignment="Center"/>
+                <TextBlock Text="闪屏修复" FontSize="13" FontWeight="Bold"
+                           Foreground="{DynamicResource Brush.Text}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                <ToggleButton x:Name="TgFlicker" Style="{StaticResource Switch}" Margin="14,0,2,0"
+                              VerticalAlignment="Center"
+                              Checked="FlickerFix_Toggled" Unchecked="FlickerFix_Toggled"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </UserControl>

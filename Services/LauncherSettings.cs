@@ -43,6 +43,11 @@ public class LauncherSettings
     public string Account { get; set; } = DefaultAccount;
     public string Password { get; set; } = DefaultPassword;
 
+    // ===== 客户端补丁 =====
+    // 【闪屏修复】勾选时把随包的 防闪屏补丁\ (dgVoodoo2) 复制进客户端根目录,
+    // 取消勾选时撤下并恢复原状。部署细节见 Services\FlickerFixService.cs。
+    public bool FlickerFixEnabled { get; set; } = false;
+
     // ===== 外观 (沿用 60US starter 的令牌) =====
     public string UiTheme { get; set; } = "dark";
     public List<string> UiBackgrounds { get; set; } = new List<string>();
@@ -164,6 +169,7 @@ public class LauncherSettings
                 WebGmPort = WebGmPort,
                 Account = Account,
                 Password = Password,
+                FlickerFixEnabled = FlickerFixEnabled,
                 UiTheme = UiTheme,
                 UiBackgrounds = new List<string>(UiBackgrounds ?? new List<string>()),
                 UiBgIndex = UiBgIndex,

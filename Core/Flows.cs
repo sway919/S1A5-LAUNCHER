@@ -109,6 +109,16 @@ public static class Flows
             else AppSys.Log(">>> 客户端目录: " + AppSys.ClientDir, "gray");
             AppSys.BootMark("AutoSetup: 目录定位完成");
 
+            // 闪屏修复: 上次勾着的话, 客户端一就位就把补丁补齐 (已在位的自动跳过)
+            if (AppSys.Settings.FlickerFixEnabled && ServerControl.IsValidClient(AppSys.ClientDir)
+                && !FlickerFixService.IsDeployedAt(AppSys.ClientDir))
+            {
+                string ffErr = null;
+                var ffOk = FlickerFixService.Deploy(AppSys.ClientDir, m => AppSys.Log(m, "gray"), out ffErr);
+                AppSys.Log(ffOk ? ">>> 闪屏修复补丁已就位。"
+                                : "[闪屏修复] 自动补丁失败: " + ffErr, ffOk ? "gray" : "warn");
+            }
+
             AppSys.Settings.FirstRunDone = true;
             AppSys.SaveSettings();
 
@@ -558,6 +568,80 @@ public static class Flows
     /// <summary>游戏是不是正在跑（只认"确认在跑"；"查不出来"见 GameClientState）</summary>
     public static bool IsGameClientRunning() => GameClientState() == ClientRunState.Running;
 
+    // =================================================================
+    // 闪屏修复 (防闪屏补丁 → 客户端根目录, 见 Services\FlickerFixService.cs)
+    // =================================================================
+    /*
+     * 首页【闪屏修复】开关背后的流程。勾选 = 把随包的 防闪屏补丁\ (dgVoodoo2)
+     * 复制进客户端根目录; 取消 = 撤下我们的副本并还原备份过的原文件。
+     * 另有两处"保险"入口共用 EnsureFlickerFixDeployed():
+     *   · 启动自检 (AutoSetup): 上次勾着、客户端一就位就把补丁补齐;
+     *   · 开始游戏 (Play): 进游戏前再补一次 (玩家可能手动删过/重解过客户端)。
+     *
+     * 【返回 true = 开关状态成立】false = 被拦下, 调用方 (HomeView) 要把开关弹回。
+     *   只有两种情况拦: 有流程在跑 (Busy) / 游戏运行中想撤下 (D3D8.dll 正被进程
+     *   映射, 删不掉)。部署失败 (补丁文件夹缺失等) 不弹回 —— 开关保持勾选、
+     *   状态点变橙, 等补丁文件夹回来后 AutoSetup/Play 会自动补上。
+     */
+    public static async Task<bool> ApplyFlickerFixAsync(bool on)
+    {
+        if (AppSys.Busy)
+        {
+            AppSys.Log("有流程正在执行，请稍候再改闪屏修复开关。", "warn");
+            return false;
+        }
+
+        if (!on && GameClientState() != ClientRunState.NotRunning)
+        {
+            AppSys.Log("[闪屏修复] 游戏正在运行 —— D3D8.dll 正被游戏占用，先退出游戏再关闭闪屏修复。", "err");
+            return false;
+        }
+
+        AppSys.Settings.FlickerFixEnabled = on;
+        AppSys.SaveSettings();
+
+        var client = AppSys.ClientDir;
+        if (!ServerControl.IsValidClient(client))
+        {
+            AppSys.Log("[闪屏修复] 还没定位到客户端目录 —— 开关状态已记住，"
+                     + "等定位到客户端（或点【开始游戏】）时会自动把补丁补进去。", "warn");
+            AppSys.FireStatus();
+            return true;
+        }
+
+        string err = null;
+        var ok = on
+            ? await Task.Run(() => FlickerFixService.Deploy(client, m => AppSys.Log(m, "gray"), out err))
+            : await Task.Run(() => FlickerFixService.RemoveDeployed(client, m => AppSys.Log(m, "gray"), out err));
+        if (ok) AppSys.Log(on ? ">>> 闪屏修复已开启（下次进游戏生效）。"
+                              : ">>> 闪屏修复已关闭，客户端目录已恢复原状。", "ok");
+        else AppSys.Log("[闪屏修复] " + err, "err");
+        AppSys.RefreshStatus();
+        return true;
+    }
+
+    /// <summary>
+    /// 确保"勾选了闪屏修复"时补丁真的在客户端目录里。只补缺, 不报弹窗 ——
+    /// 它是保险动作, 失败只 warn, 绝不拦【开始游戏】(闪屏是体验问题, 不是硬前提)。
+    /// </summary>
+    public static async Task EnsureFlickerFixDeployed()
+    {
+        try
+        {
+            if (!AppSys.Settings.FlickerFixEnabled) return;
+            var client = AppSys.ClientDir;
+            if (!ServerControl.IsValidClient(client)) return;
+            if (FlickerFixService.IsDeployedAt(client)) return;
+
+            string err = null;
+            var ok = await Task.Run(() => FlickerFixService.Deploy(client, m => AppSys.Log(m, "gray"), out err));
+            AppSys.Log(ok ? ">>> 闪屏修复补丁已就位。"
+                          : "[闪屏修复] 自动补丁失败: " + err + "（不影响启动，可稍后重新勾选一次）",
+                        ok ? "gray" : "warn");
+        }
+        catch (Exception ex) { AppSys.Log("[闪屏修复] 自动补丁出错: " + ex.Message, "warn"); }
+    }
+
     public static async Task Play()
     {
         if (AppSys.Busy) { AppSys.Log("有流程正在执行，请稍候。", "warn"); return; }
@@ -584,6 +668,9 @@ public static class Flows
                 if (!ServerControl.IsValidClient(AppSys.ClientDir)) return;
             }
         }
+
+        // --- 1.5 闪屏修复: 勾选了就确保补丁在客户端目录里 (失败只 warn, 不拦启动) ---
+        await EnsureFlickerFixDeployed();
 
         // --- 2. A5.dll 客户端补丁提示 (没有它杀怪不上报, 但不拦启动) ---
         if (!File.Exists(Path.Combine(AppSys.ClientDir, "A5.dll")))

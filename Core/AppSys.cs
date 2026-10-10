@@ -285,6 +285,14 @@ public static class AppSys
     public static event Action OverlayChanged;     // 背景遮罩浓度变化
     public static void FireOverlay() { var h = OverlayChanged; if (h != null) h(); }
 
+    // 运行日志面板展开/收起 (MainWindow.SetLogExpanded 维护)。
+    // 首页的【闪屏修复】开关胶囊悬在日志胶囊正上方, 日志面板展开时会压住它 ——
+    // 它订阅这个事件在展开期间让位 (HomeView, 订阅与退订严格配对)。
+    public static bool LogExpanded;
+    public static event Action<bool> LogExpandChanged;
+    public static void FireLogExpand(bool expanded)
+    { LogExpanded = expanded; var h = LogExpandChanged; if (h != null) h(expanded); }
+
     public static event Action BackgroundsChanged; // 背景列表变化
     public static void FireBackgrounds() { var h = BackgroundsChanged; if (h != null) h(); }
 

@@ -36,6 +36,9 @@ Services\ServerControl.cs  Java 25 探测（逐个候选跑 -version 验 ≥25�
 Services\ArchiveService.cs  存档三件套备份/还原/重命名/删除/导入/重开（服务端在跑时拒写）
 Services\LauncherSettings.cs 本地设置（原子写；坏文件留 .bad 证据）。
                            含 AgreementAccepted（首次运行门禁的确认位；删配置文件即重新确认）
+Services\FlickerFixService.cs 闪屏修复：把随包 防闪屏补丁\（dgVoodoo2）复制进客户端根目录 / 撤下恢复
+                           （首页【闪屏修复】开关背后；覆盖玩家原文件前先备份、撤下按 md5 判副本，
+                           补丁夹定位 = 启动器同目录→向上一级→向上两级）
 Services\PortInfo.cs    读系统 TCP 监听表拿"某进程在听的端口"（不 spawn netstat）
 Views\                  HomeView / ArchiveView / SettingsView(目录定位·外观·目录与环境，含 Java 运行环境卡) /
                         HelpView(7 条大白话说明) / SplashWindow(启动落地窗) / DlgWindow /

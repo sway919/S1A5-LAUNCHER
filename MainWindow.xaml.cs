@@ -752,6 +752,7 @@ public partial class MainWindow : Window
         LogTools.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
         if (FoldIcon != null)
             FoldIcon.Data = (Geometry)FindResource(on ? "IcChevD" : "IcChevU");
+        AppSys.FireLogExpand(on);   // 首页【闪屏修复】开关胶囊据此让位/回来
     }
 
     void LogCopy_Click(object sender, RoutedEventArgs e)
