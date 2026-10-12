@@ -111,10 +111,10 @@ public static class Flows
 
             // 闪屏修复: 上次勾着的话, 客户端一就位就把补丁补齐 (已在位的自动跳过)
             if (AppSys.Settings.FlickerFixEnabled && ServerControl.IsValidClient(AppSys.ClientDir)
-                && !FlickerFixService.IsDeployedAt(AppSys.ClientDir))
+                && !FlickerFixService.IsDeployedAt(AppSys.ClientDir, AppSys.Settings.FlickerFixMode))
             {
                 string ffErr = null;
-                var ffOk = FlickerFixService.Deploy(AppSys.ClientDir, m => AppSys.Log(m, "gray"), out ffErr);
+                var ffOk = FlickerFixService.Deploy(AppSys.ClientDir, AppSys.Settings.FlickerFixMode, m => AppSys.Log(m, "gray"), out ffErr);
                 AppSys.Log(ffOk ? ">>> 闪屏修复补丁已就位。"
                                 : "[闪屏修复] 自动补丁失败: " + ffErr, ffOk ? "gray" : "warn");
             }
@@ -572,8 +572,9 @@ public static class Flows
     // 闪屏修复 (防闪屏补丁 → 客户端根目录, 见 Services\FlickerFixService.cs)
     // =================================================================
     /*
-     * 首页【闪屏修复】开关背后的流程。勾选 = 把随包的 防闪屏补丁\ (dgVoodoo2)
-     * 复制进客户端根目录; 取消 = 撤下我们的副本并还原备份过的原文件。
+     * 首页【闪屏修复】开关背后的流程。勾选 = 把随包的补丁复制进客户端根目录
+     * （模式 = 设置里的 FlickerFixMode: 电脑 = dgVoodoo2 整夹 / Wine = 原生修复两个 dll）;
+     * 取消 = 撤下我们的副本并还原备份过的原文件。
      * 另有两处"保险"入口共用 EnsureFlickerFixDeployed():
      *   · 启动自检 (AutoSetup): 上次勾着、客户端一就位就把补丁补齐;
      *   · 开始游戏 (Play): 进游戏前再补一次 (玩家可能手动删过/重解过客户端)。
@@ -583,7 +584,9 @@ public static class Flows
      *   映射, 删不掉)。部署失败 (补丁文件夹缺失等) 不弹回 —— 开关保持勾选、
      *   状态点变橙, 等补丁文件夹回来后 AutoSetup/Play 会自动补上。
      */
-    public static async Task<bool> ApplyFlickerFixAsync(bool on)
+    public static async Task<bool> ApplyFlickerFixAsync(bool on) => await ApplyFlickerFixAsync(on, AppSys.Settings.FlickerFixMode);
+
+    public static async Task<bool> ApplyFlickerFixAsync(bool on, string mode)
     {
         if (AppSys.Busy)
         {
@@ -598,6 +601,7 @@ public static class Flows
         }
 
         AppSys.Settings.FlickerFixEnabled = on;
+        AppSys.Settings.FlickerFixMode = FlickerFixService.NormalizeMode(mode);
         AppSys.SaveSettings();
 
         var client = AppSys.ClientDir;
@@ -611,9 +615,9 @@ public static class Flows
 
         string err = null;
         var ok = on
-            ? await Task.Run(() => FlickerFixService.Deploy(client, m => AppSys.Log(m, "gray"), out err))
+            ? await Task.Run(() => FlickerFixService.Deploy(client, AppSys.Settings.FlickerFixMode, m => AppSys.Log(m, "gray"), out err))
             : await Task.Run(() => FlickerFixService.RemoveDeployed(client, m => AppSys.Log(m, "gray"), out err));
-        if (ok) AppSys.Log(on ? ">>> 闪屏修复已开启（下次进游戏生效）。"
+        if (ok) AppSys.Log(on ? ">>> 闪屏修复已开启（" + (AppSys.Settings.FlickerFixMode == FlickerFixService.ModeWine ? "Wine 补丁" : "dgVoodoo 补丁") + "，下次进游戏生效）。"
                               : ">>> 闪屏修复已关闭，客户端目录已恢复原状。", "ok");
         else AppSys.Log("[闪屏修复] " + err, "err");
         AppSys.RefreshStatus();
@@ -631,10 +635,10 @@ public static class Flows
             if (!AppSys.Settings.FlickerFixEnabled) return;
             var client = AppSys.ClientDir;
             if (!ServerControl.IsValidClient(client)) return;
-            if (FlickerFixService.IsDeployedAt(client)) return;
+            if (FlickerFixService.IsDeployedAt(client, AppSys.Settings.FlickerFixMode)) return;
 
             string err = null;
-            var ok = await Task.Run(() => FlickerFixService.Deploy(client, m => AppSys.Log(m, "gray"), out err));
+            var ok = await Task.Run(() => FlickerFixService.Deploy(client, AppSys.Settings.FlickerFixMode, m => AppSys.Log(m, "gray"), out err));
             AppSys.Log(ok ? ">>> 闪屏修复补丁已就位。"
                           : "[闪屏修复] 自动补丁失败: " + err + "（不影响启动，可稍后重新勾选一次）",
                         ok ? "gray" : "warn");

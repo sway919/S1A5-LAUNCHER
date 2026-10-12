@@ -44,6 +44,7 @@ public partial class HomeView : UserControl, MainWindow.IHomeHooks, MainWindow.I
                 _ready = true;
                 ApplyTabs();
                 SetFlickerSwitch(AppSys.Settings.FlickerFixEnabled);   // 开关回填上次的状态
+                SetFlickerMode(AppSys.Settings.FlickerFixMode);        // 电脑/Wine 二选一回填
             }
             // 上次离开页面后日志面板可能被展开过 (订阅断了没听到) —— 进页面时按当前状态对齐
             CardFlicker.Visibility = AppSys.LogExpanded ? Visibility.Collapsed : Visibility.Visible;
@@ -328,16 +329,49 @@ public partial class HomeView : UserControl, MainWindow.IHomeHooks, MainWindow.I
     // =================================================================
     // 闪屏修复开关 (运行日志胶囊正上方; 逻辑在 Flows.ApplyFlickerFixAsync)
     // =================================================================
-    /* 勾选 = 把随包的 防闪屏补丁\ 复制进客户端根目录; 取消 = 撤下并恢复原状。
-     * 补丁文件要不要真的动、游戏在跑怎么办, 全在 Flows/FlickerFixService 里管 ——
-     * 这里只负责: 开关状态写进设置 (由 Flows 落盘) + 被拦下时把开关弹回。 */
+    /* 勾选 = 把随包补丁复制进客户端根目录（哪套由【电脑/Wine】切换决定）;
+     * 取消 = 撤下并恢复原状。补丁文件要不要真的动、游戏在跑怎么办,
+     * 全在 Flows/FlickerFixService 里管 —— 这里只负责: 开关/模式状态写进设置
+     * (由 Flows 落盘) + 被拦下时把开关弹回。 */
     bool _flickerSuppress;   // 代码里回填 IsChecked 会再次触发 Toggled, 用它把那一圈静音
+    bool _flickerModeSuppress;
 
     void SetFlickerSwitch(bool on)
     {
         _flickerSuppress = true;
         TgFlicker.IsChecked = on;
         _flickerSuppress = false;
+    }
+
+    /// <summary>电脑/Wine 二选一回填（"pc"=电脑 / "wine"=Wine, 其它值按电脑）</summary>
+    void SetFlickerMode(string mode)
+    {
+        _flickerModeSuppress = true;
+        var wine = FlickerFixService.NormalizeMode(mode) == FlickerFixService.ModeWine;
+        RbFlickerWine.IsChecked = wine;
+        RbFlickerPc.IsChecked = !wine;
+        _flickerModeSuppress = false;
+    }
+
+    async void FlickerMode_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_flickerModeSuppress) return;
+        var mode = RbFlickerWine.IsChecked == true ? FlickerFixService.ModeWine : FlickerFixService.ModePc;
+        var on = TgFlicker.IsChecked == true;
+        if (!on)
+        {
+            // 闪屏修复没开: 只记住选择, 不动客户端
+            AppSys.Settings.FlickerFixMode = mode;
+            AppSys.SaveSettings();
+            AppSys.Log(">>> 闪屏修复补丁切换为【" + (mode == FlickerFixService.ModeWine ? "Wine" : "电脑") + "】（下次开启时生效）。", "gray");
+            return;
+        }
+        // 已勾着: 换模式 = 用新补丁换掉在位的那套 (服务内部会先撤旧再装新);
+        // 被拦下 (游戏在跑/流程在跑) → 单选钮弹回。
+        var prev = AppSys.Settings.FlickerFixMode;
+        var ok = await Flows.ApplyFlickerFixAsync(true, mode);
+        if (!ok) SetFlickerMode(prev);
+        UpdateFlickerDot();
     }
 
     async void FlickerFix_Toggled(object sender, RoutedEventArgs e)
@@ -355,7 +389,7 @@ public partial class HomeView : UserControl, MainWindow.IHomeHooks, MainWindow.I
         if (Df == null) return;
         if (TgFlicker.IsChecked != true) { SetDot(Df, DotState.Idle); return; }
         var ok = ServerControl.IsValidClient(AppSys.ClientDir)
-              && FlickerFixService.IsDeployedAt(AppSys.ClientDir);
+              && FlickerFixService.IsDeployedAt(AppSys.ClientDir, AppSys.Settings.FlickerFixMode);
         SetDot(Df, ok ? DotState.Ok : DotState.Warn);
     }
 

@@ -44,9 +44,16 @@ public class LauncherSettings
     public string Password { get; set; } = DefaultPassword;
 
     // ===== 客户端补丁 =====
-    // 【闪屏修复】勾选时把随包的 防闪屏补丁\ (dgVoodoo2) 复制进客户端根目录,
-    // 取消勾选时撤下并恢复原状。部署细节见 Services\FlickerFixService.cs。
+    // 【闪屏修复】勾选时把随包的补丁复制进客户端根目录, 取消勾选时撤下并恢复原状。
+    // 部署细节见 Services\FlickerFixService.cs。
     public bool FlickerFixEnabled { get; set; } = false;
+
+    /*
+     * 【闪屏修复】用哪套补丁: "pc" = dgVoodoo2（Windows 本机, 默认）/
+     *   "wine" = 闪烁原生修复（Wine/Linux 适配两个 dll）。只认这两种值,
+     *   其它/缺失 → 回 "pc"（与旧配置文件兼容）。
+     */
+    public string FlickerFixMode { get; set; } = "pc";
 
     // ===== 外观 (沿用 60US starter 的令牌) =====
     public string UiTheme { get; set; } = "dark";
@@ -141,6 +148,8 @@ public class LauncherSettings
         }
         if (s.GamePort < 1 || s.GamePort > 65535) s.GamePort = 10011;
         if (s.WebGmPort < 1 || s.WebGmPort > 65535) s.WebGmPort = 5052;
+        // 闪屏修复模式只认 pc / wine, 其它一律回 pc（旧配置没有这个字段也走这里）
+        s.FlickerFixMode = s.FlickerFixMode == "wine" ? "wine" : "pc";
         if (s.UiBackgrounds == null) s.UiBackgrounds = new List<string>();
         s.UiBackgrounds.RemoveAll(string.IsNullOrWhiteSpace);
         if (s.UiBgIndex < 0) s.UiBgIndex = 0;
@@ -170,6 +179,7 @@ public class LauncherSettings
                 Account = Account,
                 Password = Password,
                 FlickerFixEnabled = FlickerFixEnabled,
+                FlickerFixMode = FlickerFixMode == "wine" ? "wine" : "pc",
                 UiTheme = UiTheme,
                 UiBackgrounds = new List<string>(UiBackgrounds ?? new List<string>()),
                 UiBgIndex = UiBgIndex,

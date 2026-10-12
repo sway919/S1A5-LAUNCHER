@@ -7,8 +7,8 @@
           - 快捷: 打开各类目录 + A5.dll 补丁状态说明
       · 右下 指挥台: GM 工具 · 停止 · 重启 · 开始游戏
       · 底部: 运行日志胶囊 (主窗口) 悬在两卡之下
-      · 日志胶囊正上方: 【闪屏修复】开关 (状态点 + Switch; 部署/撤下见 Services\FlickerFixService.cs,
-        日志面板展开时自动让位)
+      · 日志胶囊正上方: 【闪屏修复】开关 (状态点 + Switch + 电脑/Wine 二选一; 部署/撤下见
+        Services\FlickerFixService.cs, 日志面板展开时自动让位)
 
     设计纪律: 青蓝 = 次级行动/选中, 金 = 唯一主行动; 不出现大面积白色实心块。
     ════════════════════════════════════════════════════════════════
@@ -321,18 +321,32 @@
         </ContentControl>
 
         <!-- ════════════ 闪屏修复开关 (运行日志胶囊正上方; 日志面板展开时让位, 见 AppSys.LogExpandChanged) ════════════
-             勾选 = 把随包的 防闪屏补丁\ (dgVoodoo2) 复制进客户端根目录, 解决闪屏;
-             取消 = 撤下并恢复原状。逻辑在 Services\FlickerFixService.cs + Flows.ApplyFlickerFixAsync。 -->
+             勾选 = 把随包的补丁复制进客户端根目录, 解决闪屏; 取消 = 撤下并恢复原状。
+             【电脑/Wine】切换选哪套: 电脑 = dgVoodoo2（Windows 本机）; Wine = 闪烁原生修复
+             （Wine/Linux 适配）。逻辑在 Services\FlickerFixService.cs + Flows.ApplyFlickerFixAsync。 -->
         <Border x:Name="CardFlicker" HorizontalAlignment="Right" VerticalAlignment="Bottom"
                 Margin="0,0,26,218" Height="40" CornerRadius="12"
                 Background="{DynamicResource Brush.GlassStrong}"
                 BorderBrush="{DynamicResource Brush.GlassEdge}" BorderThickness="1"
-                ToolTip="闪屏修复（dgVoodoo 补丁）&#x0a;勾选：自动把启动器旁边的【防闪屏补丁】文件夹复制进游戏客户端目录，解决进游戏后画面闪屏。&#x0a;取消勾选：移除补丁并恢复原文件。&#x0a;补丁文件夹要和启动器放在一起（找不到时会自动向上层找两级）。">
+                ToolTip="闪屏修复&#x0a;勾选：自动把启动器旁边的【防闪屏补丁】文件夹里的补丁复制进游戏客户端目录，解决进游戏后画面闪屏。&#x0a;取消勾选：移除补丁并恢复原文件。&#x0a;补丁文件夹要和启动器放在一起（找不到时会自动向上层找两级）。">
             <StackPanel Orientation="Horizontal" Margin="14,0,14,0" VerticalAlignment="Center">
                 <Ellipse x:Name="Df" Width="7" Height="7" Fill="{DynamicResource Brush.Text3}" VerticalAlignment="Center"/>
                 <TextBlock Text="闪屏修复" FontSize="13" FontWeight="Bold"
                            Foreground="{DynamicResource Brush.Text}" Margin="8,0,0,0" VerticalAlignment="Center"/>
-                <ToggleButton x:Name="TgFlicker" Style="{StaticResource Switch}" Margin="14,0,2,0"
+                <!-- 电脑/Wine 二选一: 电脑 = dgVoodoo 补丁（Windows）; Wine = 原生修复（Wine/Linux） -->
+                <Border CornerRadius="8" Margin="12,0,0,0" VerticalAlignment="Center"
+                        Background="{DynamicResource Brush.FieldFill}"
+                        BorderBrush="{DynamicResource Brush.GlassEdge}" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="RbFlickerPc" GroupName="ffmode" Content="电脑"
+                                     Style="{StaticResource Seg}" Padding="10,4" Checked="FlickerMode_Changed"
+                                     ToolTip="电脑（Windows 本机）用 dgVoodoo 补丁：D3D8.dll + dgVoodoo.conf + 配置器。"/>
+                        <RadioButton x:Name="RbFlickerWine" GroupName="ffmode" Content="Wine"
+                                     Style="{StaticResource Seg}" Padding="10,4" Checked="FlickerMode_Changed"
+                                     ToolTip="Wine / Linux（Steam Deck、Proton 等）用闪烁原生修复：dinput8.dll（字体+假任务栏）+ d3d8_viewport_fix.dll（视口闪烁，经 dll_ext 挂载）。&#x0a;Wine 启动脚本还需 WINEDLLOVERRIDES=&quot;dinput8=n,b&quot;，详见补丁夹里的 Linux 适配总结。"/>
+                    </StackPanel>
+                </Border>
+                <ToggleButton x:Name="TgFlicker" Style="{StaticResource Switch}" Margin="10,0,2,0"
                               VerticalAlignment="Center"
                               Checked="FlickerFix_Toggled" Unchecked="FlickerFix_Toggled"/>
             </StackPanel>
